@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Navigation
 function showSection(sectionName, element) {
+    // Prevent default link behavior
+    event.preventDefault();
+    
     // Hide all sections
     document.querySelectorAll('.content-section').forEach(section => {
         section.style.display = 'none';
@@ -177,6 +180,7 @@ function updateCategoryDropdown() {
 function showAddCategoryModal() {
     currentEditingCategory = null;
     document.getElementById('categoryForm').reset();
+    document.getElementById('categoryId').disabled = false; // Enable ID field for new category
     document.querySelector('#addCategoryModal .modal-title').textContent = 'Add Category';
     new bootstrap.Modal(document.getElementById('addCategoryModal')).show();
 }
@@ -191,9 +195,9 @@ function showAddVideoModal() {
 
 // Save Category
 function saveCategory() {
-    const id = document.getElementById('categoryId').value;
-    const name = document.getElementById('categoryName').value;
-    const imageUrl = document.getElementById('categoryImage').value;
+    const id = document.getElementById('categoryId').value.trim();
+    const name = document.getElementById('categoryName').value.trim();
+    const imageUrl = document.getElementById('categoryImage').value.trim();
     const isActive = document.getElementById('categoryActive').checked;
     
     if (!id || !name || !imageUrl) {
@@ -209,10 +213,13 @@ function saveCategory() {
         isActive: isActive
     };
     
-    database.ref(`categories/${id}`).set(categoryData)
+    // Check if editing or adding new
+    const ref = database.ref(`categories/${currentEditingCategory || id}`);
+    ref.set(categoryData)
         .then(() => {
             bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
-            alert('Category saved successfully!');
+            alert(currentEditingCategory ? 'Category updated successfully!' : 'Category saved successfully!');
+            currentEditingCategory = null;
         })
         .catch(error => {
             alert('Error saving category: ' + error.message);
@@ -221,10 +228,10 @@ function saveCategory() {
 
 // Save Video
 function saveVideo() {
-    const title = document.getElementById('videoTitle').value;
-    const youtubeLink = document.getElementById('youtubeLink').value;
+    const title = document.getElementById('videoTitle').value.trim();
+    const youtubeLink = document.getElementById('youtubeLink').value.trim();
     const categoryId = document.getElementById('videoCategory').value;
-    const description = document.getElementById('videoDescription').value;
+    const description = document.getElementById('videoDescription').value.trim();
     const views = parseInt(document.getElementById('videoViews').value) || 0;
     const isActive = document.getElementById('videoActive').checked;
     
@@ -233,11 +240,11 @@ function saveVideo() {
         return;
     }
     
-    const videoId = 'video_' + Date.now();
     const category = categories[categoryId];
+    const videoId = currentEditingVideo ? currentEditingVideo.videoId : 'video_' + Date.now();
     
     const videoData = {
-        id: Date.now(),
+        id: currentEditingVideo ? videos[currentEditingVideo.categoryId][currentEditingVideo.videoId].id : Date.now(),
         title: title,
         youtubeLink: youtubeLink,
         thumbnailUrl: `https://i.ytimg.com/vi/${youtubeLink}/hqdefault.jpg`,
@@ -250,10 +257,16 @@ function saveVideo() {
         timestamp: Date.now()
     };
     
+    // If editing and category has changed, remove from old category
+    if (currentEditingVideo && currentEditingVideo.categoryId !== categoryId) {
+        database.ref(`videos/${currentEditingVideo.categoryId}/${currentEditingVideo.videoId}`).remove();
+    }
+    
     database.ref(`videos/${categoryId}/${videoId}`).set(videoData)
         .then(() => {
             bootstrap.Modal.getInstance(document.getElementById('addVideoModal')).hide();
-            alert('Video saved successfully!');
+            alert(currentEditingVideo ? 'Video updated successfully!' : 'Video saved successfully!');
+            currentEditingVideo = null;
         })
         .catch(error => {
             alert('Error saving video: ' + error.message);
@@ -266,6 +279,7 @@ function editCategory(categoryId) {
     currentEditingCategory = categoryId;
     
     document.getElementById('categoryId').value = category.id;
+    document.getElementById('categoryId').disabled = true; // Disable ID field when editing
     document.getElementById('categoryName').value = category.name;
     document.getElementById('categoryImage').value = category.imageUrl;
     document.getElementById('categoryActive').checked = category.isActive;
@@ -277,7 +291,7 @@ function editCategory(categoryId) {
 // Edit Video
 function editVideo(categoryId, videoId) {
     const video = videos[categoryId][videoId];
-    currentEditingVideo = {categoryId, videoId};
+    currentEditingVideo = { categoryId, videoId };
     
     document.getElementById('videoTitle').value = video.title;
     document.getElementById('youtubeLink').value = video.youtubeLink;
