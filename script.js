@@ -1,0 +1,321 @@
+// Firebase Configuration
+const firebaseConfig = {
+    // Replace with your Firebase config
+    apiKey: "your-api-key",
+    authDomain: "your-project.firebaseapp.com",
+    databaseURL: "https://your-project-default-rtdb.firebaseio.com/",
+    projectId: "your-project-id",
+    storageBucket: "your-project.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "your-app-id"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+let categories = {};
+let videos = {};
+let currentEditingCategory = null;
+let currentEditingVideo = null;
+
+// Initialize app
+document.addEventListener('DOMContentLoaded', function() {
+    loadCategories();
+    loadVideos();
+    updateDashboard();
+});
+
+// Navigation
+function showSection(sectionName) {
+    // Hide all sections
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Show selected section
+    document.getElementById(sectionName).style.display = 'block';
+    
+    // Update nav links
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+// Load Categories
+function loadCategories() {
+    database.ref('categories').on('value', (snapshot) => {
+        categories = snapshot.val() || {};
+        displayCategories();
+        updateCategoryDropdown();
+        updateDashboard();
+    });
+}
+
+// Load Videos
+function loadVideos() {
+    database.ref('videos').on('value', (snapshot) => {
+        videos = snapshot.val() || {};
+        displayVideos();
+        updateDashboard();
+    });
+}
+
+// Display Categories
+function displayCategories() {
+    const tbody = document.getElementById('categoriesTable');
+    tbody.innerHTML = '';
+    
+    Object.keys(categories).forEach(categoryId => {
+        const category = categories[categoryId];
+        const row = `
+            <tr>
+                <td>${category.name}</td>
+                <td>${category.id}</td>
+                <td>
+                    <span class="status-badge ${category.isActive ? 'status-active' : 'status-inactive'}">
+                        ${category.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-2" onclick="editCategory('${categoryId}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${categoryId}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-${category.isActive ? 'warning' : 'success'}" 
+                            onclick="toggleCategoryStatus('${categoryId}')">
+                        <i class="fas fa-${category.isActive ? 'eye-slash' : 'eye'}"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        tbody.innerHTML += row;
+    });
+}
+
+// Display Videos
+function displayVideos() {
+    const tbody = document.getElementById('videosTable');
+    tbody.innerHTML = '';
+    
+    Object.keys(videos).forEach(categoryId => {
+        const categoryVideos = videos[categoryId] || {};
+        Object.keys(categoryVideos).forEach(videoId => {
+            const video = categoryVideos[videoId];
+            const row = `
+                <tr>
+                    <td>${video.title}</td>
+                    <td>${video.category}</td>
+                    <td>${video.views.toLocaleString()}</td>
+                    <td>
+                        <span class="status-badge ${video.isActive ? 'status-active' : 'status-inactive'}">
+                            ${video.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-2" onclick="editVideo('${categoryId}', '${videoId}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteVideo('${categoryId}', '${videoId}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-${video.isActive ? 'warning' : 'success'}" 
+                                onclick="toggleVideoStatus('${categoryId}', '${videoId}')">
+                            <i class="fas fa-${video.isActive ? 'eye-slash' : 'eye'}"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    });
+}
+
+// Update Dashboard
+function updateDashboard() {
+    const totalCats = Object.keys(categories).length;
+    const activeCats = Object.values(categories).filter(cat => cat.isActive).length;
+    
+    let totalVids = 0;
+    let activeVids = 0;
+    
+    Object.values(videos).forEach(categoryVideos => {
+        Object.values(categoryVideos).forEach(video => {
+            totalVids++;
+            if (video.isActive) activeVids++;
+        });
+    });
+    
+    document.getElementById('totalCategories').textContent = totalCats;
+    document.getElementById('totalVideos').textContent = totalVids;
+}
+
+// Update Category Dropdown
+function updateCategoryDropdown() {
+    const select = document.getElementById('videoCategory');
+    select.innerHTML = '<option value="">Select Category</option>';
+    
+    Object.values(categories).forEach(category => {
+        if (category.isActive) {
+            select.innerHTML += `<option value="${category.id}">${category.name}</option>`;
+        }
+    });
+}
+
+// Show Add Category Modal
+function showAddCategoryModal() {
+    currentEditingCategory = null;
+    document.getElementById('categoryForm').reset();
+    document.querySelector('#addCategoryModal .modal-title').textContent = 'Add Category';
+    new bootstrap.Modal(document.getElementById('addCategoryModal')).show();
+}
+
+// Show Add Video Modal
+function showAddVideoModal() {
+    currentEditingVideo = null;
+    document.getElementById('videoForm').reset();
+    document.querySelector('#addVideoModal .modal-title').textContent = 'Add Video';
+    new bootstrap.Modal(document.getElementById('addVideoModal')).show();
+}
+
+// Save Category
+function saveCategory() {
+    const id = document.getElementById('categoryId').value;
+    const name = document.getElementById('categoryName').value;
+    const imageUrl = document.getElementById('categoryImage').value;
+    const isActive = document.getElementById('categoryActive').checked;
+    
+    if (!id || !name || !imageUrl) {
+        alert('Please fill all required fields');
+        return;
+    }
+    
+    const categoryData = {
+        id: id,
+        name: name,
+        imageUrl: imageUrl,
+        folderPath: `categories/${id}`,
+        isActive: isActive
+    };
+    
+    database.ref(`categories/${id}`).set(categoryData)
+        .then(() => {
+            bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
+            alert('Category saved successfully!');
+        })
+        .catch(error => {
+            alert('Error saving category: ' + error.message);
+        });
+}
+
+// Save Video
+function saveVideo() {
+    const title = document.getElementById('videoTitle').value;
+    const youtubeLink = document.getElementById('youtubeLink').value;
+    const categoryId = document.getElementById('videoCategory').value;
+    const description = document.getElementById('videoDescription').value;
+    const views = parseInt(document.getElementById('videoViews').value) || 0;
+    const isActive = document.getElementById('videoActive').checked;
+    
+    if (!title || !youtubeLink || !categoryId) {
+        alert('Please fill all required fields');
+        return;
+    }
+    
+    const videoId = 'video_' + Date.now();
+    const category = categories[categoryId];
+    
+    const videoData = {
+        id: Date.now(),
+        title: title,
+        youtubeLink: youtubeLink,
+        thumbnailUrl: `https://i.ytimg.com/vi/${youtubeLink}/hqdefault.jpg`,
+        description: description,
+        category: category.name,
+        categoryId: categoryId,
+        views: views,
+        uploadDate: new Date().toISOString().split('T')[0],
+        isActive: isActive,
+        timestamp: Date.now()
+    };
+    
+    database.ref(`videos/${categoryId}/${videoId}`).set(videoData)
+        .then(() => {
+            bootstrap.Modal.getInstance(document.getElementById('addVideoModal')).hide();
+            alert('Video saved successfully!');
+        })
+        .catch(error => {
+            alert('Error saving video: ' + error.message);
+        });
+}
+
+// Edit Category
+function editCategory(categoryId) {
+    const category = categories[categoryId];
+    currentEditingCategory = categoryId;
+    
+    document.getElementById('categoryId').value = category.id;
+    document.getElementById('categoryName').value = category.name;
+    document.getElementById('categoryImage').value = category.imageUrl;
+    document.getElementById('categoryActive').checked = category.isActive;
+    
+    document.querySelector('#addCategoryModal .modal-title').textContent = 'Edit Category';
+    new bootstrap.Modal(document.getElementById('addCategoryModal')).show();
+}
+
+// Edit Video
+function editVideo(categoryId, videoId) {
+    const video = videos[categoryId][videoId];
+    currentEditingVideo = {categoryId, videoId};
+    
+    document.getElementById('videoTitle').value = video.title;
+    document.getElementById('youtubeLink').value = video.youtubeLink;
+    document.getElementById('videoCategory').value = video.categoryId;
+    document.getElementById('videoDescription').value = video.description;
+    document.getElementById('videoViews').value = video.views;
+    document.getElementById('videoActive').checked = video.isActive;
+    
+    document.querySelector('#addVideoModal .modal-title').textContent = 'Edit Video';
+    new bootstrap.Modal(document.getElementById('addVideoModal')).show();
+}
+
+// Delete Category
+function deleteCategory(categoryId) {
+    if (confirm('Are you sure you want to delete this category?')) {
+        database.ref(`categories/${categoryId}`).remove()
+            .then(() => {
+                alert('Category deleted successfully!');
+            })
+            .catch(error => {
+                alert('Error deleting category: ' + error.message);
+            });
+    }
+}
+
+// Delete Video
+function deleteVideo(categoryId, videoId) {
+    if (confirm('Are you sure you want to delete this video?')) {
+        database.ref(`videos/${categoryId}/${videoId}`).remove()
+            .then(() => {
+                alert('Video deleted successfully!');
+            })
+            .catch(error => {
+                alert('Error deleting video: ' + error.message);
+            });
+    }
+}
+
+// Toggle Category Status
+function toggleCategoryStatus(categoryId) {
+    const category = categories[categoryId];
+    database.ref(`categories/${categoryId}/isActive`).set(!category.isActive);
+}
+
+// Toggle Video Status
+function toggleVideoStatus(categoryId, videoId) {
+    const video = videos[categoryId][videoId];
+    database.ref(`videos/${categoryId}/${videoId}/isActive`).set(!video.isActive);
+}
