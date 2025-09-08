@@ -1,14 +1,21 @@
-// Firebase Configuration
+// Firebase Configuration - REPLACE WITH YOUR ACTUAL CONFIG
 const firebaseConfig = {
-    // Replace with your Firebase config
-    apiKey: "your-api-key",
-    authDomain: "your-project.firebaseapp.com",
-    databaseURL: "https://your-project-default-rtdb.firebaseio.com/",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "your-app-id"
+  apiKey: "AIzaSyB9vLpSbaLXKda-NX3PkmHUQynmA-EgkU4",
+  authDomain: "toon-belly.firebaseapp.com",
+  databaseURL: "https://toon-belly-default-rtdb.firebaseio.com",
+  projectId: "toon-belly",
+  storageBucket: "toon-belly.firebasestorage.app",
+  messagingSenderId: "796622220428",
+  appId: "1:796622220428:web:6f2b4a4fe413d305241fa9",
+  measurementId: "G-4W7KS1G39Y"
 };
+};
+
+// Check if Firebase is loaded
+if (typeof firebase === 'undefined') {
+    console.error('Firebase not loaded! Check CDN links.');
+    document.getElementById('connectionStatus').innerHTML = '<i class="fas fa-circle text-danger"></i> Firebase Error';
+}
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
