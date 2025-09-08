@@ -1,13 +1,13 @@
-// Firebase Configuration - REPLACE WITH YOUR ACTUAL CONFIG
+// Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyB9vLpSbaLXKda-NX3PkmHUQynmA-EgkU4",
-  authDomain: "toon-belly.firebaseapp.com",
-  databaseURL: "https://toon-belly-default-rtdb.firebaseio.com",
-  projectId: "toon-belly",
-  storageBucket: "toon-belly.firebasestorage.app",
-  messagingSenderId: "796622220428",
-  appId: "1:796622220428:web:6f2b4a4fe413d305241fa9",
-  measurementId: "G-4W7KS1G39Y"
+    apiKey: "AIzaSyB9vLpSbaLXKda-NX3PkmHUQynmA-EgkU4",
+    authDomain: "toon-belly.firebaseapp.com",
+    databaseURL: "https://toon-belly-default-rtdb.firebaseio.com",
+    projectId: "toon-belly",
+    storageBucket: "toon-belly.firebasestorage.app",
+    messagingSenderId: "796622220428",
+    appId: "1:796622220428:web:6f2b4a4fe413d305241fa9",
+    measurementId: "G-4W7KS1G39Y"
 };
 
 // Check if Firebase is loaded
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Navigation
-function showSection(sectionName) {
+function showSection(sectionName, element) {
     // Hide all sections
     document.querySelectorAll('.content-section').forEach(section => {
         section.style.display = 'none';
@@ -46,7 +46,9 @@ function showSection(sectionName) {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
     });
-    event.target.classList.add('active');
+    if (element) {
+        element.classList.add('active');
+    }
 }
 
 // Load Categories
