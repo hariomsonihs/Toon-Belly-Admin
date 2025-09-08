@@ -9,7 +9,6 @@ const firebaseConfig = {
   appId: "1:796622220428:web:6f2b4a4fe413d305241fa9",
   measurementId: "G-4W7KS1G39Y"
 };
-};
 
 // Check if Firebase is loaded
 if (typeof firebase === 'undefined') {
